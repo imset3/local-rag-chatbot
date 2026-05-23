@@ -41,9 +41,44 @@ def inject_cyberpunk_theme() -> None:
             --cyber-border: rgba(34, 247, 255, 0.36);
         }
 
-        [data-testid="stHeader"], footer {
+        footer {
             visibility: hidden;
             height: 0;
+        }
+
+        [data-testid="stHeader"] {
+            visibility: visible;
+            background: transparent;
+        }
+
+        [data-testid="stToolbar"] {
+            display: none;
+        }
+
+        [data-testid="stSidebarCollapsedControl"],
+        [data-testid="stSidebarCollapseButton"],
+        button[aria-label="Open sidebar"],
+        button[aria-label="Close sidebar"] {
+            visibility: visible !important;
+            opacity: 1 !important;
+            border: 1px solid rgba(34, 247, 255, 0.65) !important;
+            border-radius: 8px !important;
+            color: var(--cyber-cyan) !important;
+            background: rgba(8, 13, 27, 0.92) !important;
+            box-shadow:
+                0 0 14px rgba(34, 247, 255, 0.28),
+                0 0 22px rgba(255, 43, 214, 0.12) !important;
+        }
+
+        [data-testid="stSidebarCollapsedControl"]:hover,
+        [data-testid="stSidebarCollapseButton"]:hover,
+        button[aria-label="Open sidebar"]:hover,
+        button[aria-label="Close sidebar"]:hover {
+            border-color: var(--cyber-pink) !important;
+            color: #ffffff !important;
+            box-shadow:
+                0 0 18px rgba(255, 43, 214, 0.42),
+                0 0 28px rgba(34, 247, 255, 0.20) !important;
         }
 
         .stApp {
@@ -276,7 +311,12 @@ def inject_cyberpunk_theme() -> None:
     )
 
 
-st.set_page_config(page_title="Local RAG Chatbot", page_icon="📄", layout="wide")
+st.set_page_config(
+    page_title="Local RAG Chatbot",
+    page_icon="📄",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 inject_cyberpunk_theme()
 
 
