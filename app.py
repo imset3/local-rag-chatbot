@@ -49,14 +49,13 @@ def inject_cyberpunk_theme() -> None:
         [data-testid="stHeader"] {
             visibility: visible;
             background: transparent;
+            pointer-events: auto;
         }
 
-        [data-testid="stToolbar"] {
-            display: none;
-        }
-
-        [data-testid="stSidebarCollapsedControl"],
-        [data-testid="stSidebarCollapseButton"],
+        [data-testid="stHeader"] [data-testid="stBaseButton-headerNoPadding"],
+        [data-testid="stExpandSidebarButton"],
+        [data-testid="stSidebarCollapsedControl"] button,
+        [data-testid="stSidebarCollapseButton"] button,
         button[aria-label="Open sidebar"],
         button[aria-label="Close sidebar"] {
             visibility: visible !important;
@@ -70,8 +69,10 @@ def inject_cyberpunk_theme() -> None:
                 0 0 22px rgba(255, 43, 214, 0.12) !important;
         }
 
-        [data-testid="stSidebarCollapsedControl"]:hover,
-        [data-testid="stSidebarCollapseButton"]:hover,
+        [data-testid="stHeader"] [data-testid="stBaseButton-headerNoPadding"]:hover,
+        [data-testid="stExpandSidebarButton"]:hover,
+        [data-testid="stSidebarCollapsedControl"] button:hover,
+        [data-testid="stSidebarCollapseButton"] button:hover,
         button[aria-label="Open sidebar"]:hover,
         button[aria-label="Close sidebar"]:hover {
             border-color: var(--cyber-pink) !important;
