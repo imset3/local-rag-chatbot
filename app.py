@@ -1,5 +1,10 @@
+import os
 import shutil
+import subprocess
+import time
 from pathlib import Path
+from urllib.error import URLError
+from urllib.request import urlopen
 
 import streamlit as st
 from langchain_chroma import Chroma
@@ -13,6 +18,7 @@ DATA_DIR = Path("./data")
 CHROMA_DIR = Path("./chroma_db")
 LLM_MODEL = "deepseek-r1:8b"
 EMBEDDING_MODEL = "bge-m3"
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 
 
 DATA_DIR.mkdir(exist_ok=True)
@@ -279,11 +285,46 @@ def init_session_state() -> None:
         st.session_state.messages = []
     if "indexed_files" not in st.session_state:
         st.session_state.indexed_files = set()
+    if "ollama_server_started" not in st.session_state:
+        st.session_state.ollama_server_started = False
+
+
+def is_ollama_server_running(timeout: float = 1.0) -> bool:
+    try:
+        with urlopen(f"{OLLAMA_BASE_URL}/api/tags", timeout=timeout) as response:
+            return 200 <= response.status < 500
+    except (OSError, URLError):
+        return False
+
+
+def ensure_ollama_server() -> tuple[bool, str]:
+    if is_ollama_server_running():
+        return True, "Ollama 서버가 실행 중입니다."
+
+    try:
+        subprocess.Popen(
+            ["ollama", "serve"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        st.session_state.ollama_server_started = True
+    except FileNotFoundError:
+        return False, "Ollama 명령을 찾을 수 없습니다. Ollama 설치 상태를 확인해 주세요."
+    except OSError as exc:
+        return False, f"Ollama 서버 자동 실행에 실패했습니다: {exc}"
+
+    for _ in range(20):
+        if is_ollama_server_running(timeout=0.5):
+            return True, "Ollama 서버를 자동으로 실행했습니다."
+        time.sleep(0.5)
+
+    return False, "Ollama 서버 응답이 없습니다. `ollama serve`를 수동으로 실행해 주세요."
 
 
 @st.cache_resource(show_spinner=False)
 def get_embeddings() -> OllamaEmbeddings:
-    return OllamaEmbeddings(model=EMBEDDING_MODEL)
+    return OllamaEmbeddings(model=EMBEDDING_MODEL, base_url=OLLAMA_BASE_URL)
 
 
 def get_vectorstore() -> Chroma:
@@ -297,6 +338,7 @@ def get_llm(temperature: float) -> ChatOllama:
     return ChatOllama(
         model=LLM_MODEL,
         temperature=temperature,
+        base_url=OLLAMA_BASE_URL,
     )
 
 
@@ -459,6 +501,12 @@ st.markdown(
 
 with st.sidebar:
     st.header("문서 설정")
+    ollama_ready, ollama_status = ensure_ollama_server()
+    if ollama_ready:
+        st.success(ollama_status)
+    else:
+        st.warning(ollama_status)
+
     uploaded_files = st.file_uploader(
         "PDF 업로드",
         type=["pdf"],
@@ -478,7 +526,9 @@ with st.sidebar:
         reset_vector_db()
         st.success("벡터 DB를 초기화했습니다.")
 
-    if uploaded_files:
+    if uploaded_files and not ollama_ready:
+        st.warning("문서 인덱싱 전에 Ollama 서버 연결이 필요합니다.")
+    elif uploaded_files:
         for uploaded_file in uploaded_files:
             if uploaded_file.name in st.session_state.indexed_files:
                 continue
@@ -522,6 +572,10 @@ if user_input:
             st.session_state.messages.append({"role": "assistant", "content": answer})
         elif not has_indexed_documents():
             answer = "Chroma DB가 비어 있습니다. 먼저 PDF 문서를 인덱싱해 주세요."
+            st.warning(answer)
+            st.session_state.messages.append({"role": "assistant", "content": answer})
+        elif not ollama_ready:
+            answer = ollama_status
             st.warning(answer)
             st.session_state.messages.append({"role": "assistant", "content": answer})
         else:
